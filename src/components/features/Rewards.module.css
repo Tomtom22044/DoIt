@@ -1,0 +1,122 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.balanceCard {
+    text-align: center;
+    border-color: var(--color-primary);
+    background: radial-gradient(circle at center, #2e2c5e, var(--color-card));
+}
+
+.balanceHeader {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.balanceValue {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin-top: 0.5rem;
+}
+
+.sectionTitle {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-main);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.redeemForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background-color: var(--color-card);
+    padding: 1.25rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-card-border);
+}
+
+.input {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-card-border);
+    color: var(--color-text-main);
+    font-weight: 500;
+    font-size: var(--font-size-base);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.row {
+    display: flex;
+    gap: 1rem;
+}
+
+.row input {
+    flex: 1;
+}
+
+.error {
+    color: var(--color-danger);
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.historyList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.historyItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--color-card);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-card-border);
+}
+
+.historyInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.historyName {
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.historyDate {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.historyCost {
+    color: var(--color-danger);
+    font-weight: 600;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+    font-size: var(--font-size-sm);
+}

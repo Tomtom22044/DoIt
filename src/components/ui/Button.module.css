@@ -1,0 +1,68 @@
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--font-size-base);
+    transition: all var(--transition-fast);
+    gap: 0.5rem;
+}
+
+.button:active {
+    transform: scale(0.96);
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.fullWidth {
+    width: 100%;
+}
+
+.primary {
+    background-color: var(--color-primary);
+    color: white;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+}
+
+.primary:hover:not(:disabled) {
+    background-color: var(--color-primary-hover);
+}
+
+.secondary {
+    background-color: var(--color-card-border);
+    color: var(--color-text-main);
+}
+
+.secondary:hover:not(:disabled) {
+    background-color: #475569;
+    /* Slightly lighter slate */
+}
+
+.danger {
+    background-color: rgba(239, 68, 68, 0.1);
+    /* Red with opacity */
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+}
+
+.outline {
+    background: transparent;
+    border: 1px solid var(--color-card-border);
+    color: var(--color-text-muted);
+}
+
+.sm {
+    padding: 0.5rem 1rem;
+    font-size: var(--font-size-sm);
+}
+
+.lg {
+    padding: 1rem 2rem;
+    font-size: var(--font-size-lg);
+}

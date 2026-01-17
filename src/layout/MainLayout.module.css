@@ -1,0 +1,116 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
+.header {
+    padding: 1rem 1.5rem;
+    background-color: var(--color-bg);
+    border-bottom: 1px solid var(--color-card-border);
+    z-index: 10;
+}
+
+.headerContent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header h1 {
+    font-size: 1.25rem;
+    color: var(--color-text-main);
+    background: linear-gradient(to left, var(--color-primary), var(--color-text-accent));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    letter-spacing: normal;
+}
+
+.userMenu {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.userName {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.logoutBtn {
+    background: var(--color-card);
+    border: 1px solid var(--color-card-border);
+    color: var(--color-text-muted);
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.logoutBtn:hover {
+    background: var(--color-error-dim);
+    border-color: var(--color-error);
+    color: var(--color-error);
+    transform: translateY(-1px);
+}
+
+.main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    padding-bottom: 5rem;
+    /* Space for nav */
+}
+
+.nav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4rem;
+    /* 64px */
+    background-color: var(--color-card);
+    /* Using card color for nav bar so it pops against black body if outside? logic check: container is usually in #root which is bg-color. So card color is lighter than bg. */
+    /* Wait, var(--color-bg) is slate-900. var(--color-card) is slate-800. */
+    /* Let's make nav slate-800/90 transparent mix? */
+    background: rgba(15, 23, 42, 0.9);
+    /* Slate 900 semi-transparent */
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--color-card-border);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 20;
+}
+
+.navItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    gap: 0.25rem;
+    flex: 1;
+    height: 100%;
+}
+
+.navItem.active {
+    color: var(--color-primary);
+}
+
+.navLabel {
+    font-size: 0.75rem;
+    font-weight: 500;
+}

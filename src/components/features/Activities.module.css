@@ -1,0 +1,197 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.activityCard {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    border-width: 1px;
+}
+
+.activityCard:active {
+    transform: scale(0.98);
+    background-color: var(--color-card-border);
+}
+
+.success {
+    border-color: var(--color-success);
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+.activityIconWrapper {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-full);
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--color-primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.success .activityIconWrapper {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.activityInfo {
+    flex: 1;
+}
+
+.activityName {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--color-text-main);
+    margin-bottom: 0.25rem;
+}
+
+.activityValue {
+    font-size: var(--font-size-sm);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.tapHint {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    opacity: 0.5;
+}
+
+.addSection {
+    margin-top: 1rem;
+}
+
+.addForm {
+    background-color: var(--color-card);
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid var(--color-card-border);
+    animation: fadeIn 0.3s ease;
+}
+
+.input {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-card-border);
+    color: var(--color-text-main);
+    font-size: var(--font-size-base);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.row {
+    display: flex;
+    gap: 1rem;
+}
+
+.inputGroup {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.inputGroup label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.cardActions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    margin-right: 0.5rem;
+}
+
+.activityCard:hover .cardActions {
+    opacity: 1;
+}
+
+.actionButton {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+/* Make icons easier to hit on mobile */
+.actionButton svg {
+    pointer-events: none;
+}
+
+.actionButton:hover {
+    background-color: var(--color-bg);
+    color: var(--color-text-main);
+}
+
+.deleteButton:hover {
+    color: var(--color-danger);
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.editCard {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    animation: fadeIn 0.2s ease;
+}
+
+.editRow {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.editActions {
+    display: flex;
+    gap: 0.5rem;
+    margin-right: auto;
+}
