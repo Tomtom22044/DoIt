@@ -68,6 +68,18 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+const isAdmin = async (req, res, next) => {
+    try {
+        const result = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
+        if (result.rows.length === 0 || !result.rows[0].is_admin) {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        next();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // --- Auth Routes ---
 
 /**
@@ -105,8 +117,11 @@ app.post('/api/auth/signup', async (req, res) => {
             [email, passwordHash, name]
         );
         const user = result.rows[0];
-        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET);
-        res.json({ user, token });
+        const token = jwt.sign({ id: user.id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
+        res.json({
+            user: { id: user.id, email: user.email, name: user.name, is_admin: user.is_admin },
+            token
+        });
     } catch (err) {
         if (err.code === '23505') {
             return res.status(400).json({ error: 'Email already exists' });
@@ -148,9 +163,9 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET);
+        const token = jwt.sign({ id: user.id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
         res.json({
-            user: { id: user.id, email: user.email, name: user.name },
+            user: { id: user.id, email: user.email, name: user.name, is_admin: user.is_admin },
             token
         });
     } catch (err) {
@@ -201,9 +216,9 @@ app.post('/api/auth/google', async (req, res) => {
             user = result.rows[0];
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET);
+        const token = jwt.sign({ id: user.id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
         res.json({
-            user: { id: user.id, email: user.email, name: user.name },
+            user: { id: user.id, email: user.email, name: user.name, is_admin: user.is_admin },
             token
         });
     } catch (err) {
@@ -478,6 +493,61 @@ app.post('/api/redemptions', authenticateToken, async (req, res) => {
         const result = await pool.query(
             'INSERT INTO redemptions (user_id, reward_name, cost) VALUES ($1, $2, $3) RETURNING *',
             [req.user.id, rewardName, cost]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Admin Routes ---
+
+app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.id, u.email, u.name, u.is_admin, u.created_at,
+            (SELECT COALESCE(SUM(points), 0) FROM logs WHERE user_id = u.id) as total_earned,
+            (SELECT COALESCE(SUM(cost), 0) FROM redemptions WHERE user_id = u.id) as total_spent
+            FROM users u
+            ORDER BY u.created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/admin/stats/daily', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const logsResult = await pool.query(`
+            SELECT date_trunc('day', timestamp) as day, COUNT(*) as count, SUM(points) as points
+            FROM logs
+            GROUP BY day
+            ORDER BY day DESC
+            LIMIT 30
+        `);
+        const redemptionsResult = await pool.query(`
+            SELECT date_trunc('day', timestamp) as day, COUNT(*) as count, SUM(cost) as cost
+            FROM redemptions
+            GROUP BY day
+            ORDER BY day DESC
+            LIMIT 30
+        `);
+        res.json({
+            logs: logsResult.rows,
+            redemptions: redemptionsResult.rows
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/admin/users/:id/toggle-admin', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'UPDATE users SET is_admin = NOT is_admin WHERE id = $1 RETURNING id, email, name, is_admin',
+            [id]
         );
         res.json(result.rows[0]);
     } catch (err) {

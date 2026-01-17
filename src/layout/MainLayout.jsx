@@ -1,4 +1,4 @@
-import { Activity, LayoutDashboard, Trophy, LogOut, User } from 'lucide-react';
+import { Activity, LayoutDashboard, Trophy, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import styles from './MainLayout.module.css';
 
@@ -10,6 +10,10 @@ const TABS = [
 
 export default function MainLayout({ children, activeTab, onTabChange }) {
     const { user, logout } = useAuth();
+
+    const availableTabs = user?.is_admin
+        ? [...TABS, { id: 'admin', label: 'ניהול', icon: Shield }]
+        : TABS;
 
     return (
         <div className={styles.container}>
@@ -30,7 +34,7 @@ export default function MainLayout({ children, activeTab, onTabChange }) {
             </main>
 
             <nav className={styles.nav}>
-                {TABS.map(tab => {
+                {availableTabs.map(tab => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
                     return (

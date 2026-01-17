@@ -3,6 +3,7 @@ import MainLayout from './layout/MainLayout';
 import Dashboard from './components/features/Dashboard';
 import Activities from './components/features/Activities';
 import Rewards from './components/features/Rewards';
+import AdminPanel from './components/features/AdminPanel';
 import AuthPage from './components/auth/AuthPage';
 import { useAuth } from './context/AuthContext';
 
@@ -30,6 +31,8 @@ function App() {
         return <Activities />;
       case 'rewards':
         return <Rewards />;
+      case 'admin':
+        return <AdminPanel />;
       default:
         return <Dashboard />;
     }
