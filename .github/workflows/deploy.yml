@@ -18,6 +18,8 @@ jobs:
           cache: 'npm'
 
       - name: Build Frontend
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
           npm ci
           npm run build
@@ -49,9 +51,14 @@ jobs:
           name: app-bundle
           path: ./
 
+      - name: Create .env file
+        run: |
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > server/.env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> server/.env
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> server/.env
+          echo "PORT=3000" >> server/.env
+
       - name: Restart Server with PM2
         run: |
-          # Use pm2 to manage the process. 
-          # You may need to run 'sudo npm install -g pm2' once on your droplet
           pm2 restart taskpoint || pm2 start server/index.js --name taskpoint
           pm2 save
