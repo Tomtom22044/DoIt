@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import { Users, BarChart3, Shield, ShieldOff, User } from 'lucide-react';
@@ -7,10 +7,9 @@ import styles from './AdminPanel.module.css';
 export default function AdminPanel() {
     const { token } = useAuth();
     const [users, setUsers] = useState([]);
-    const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const headers = { 'Authorization': `Bearer ${token}` };
             const [usersRes, statsRes] = await Promise.all([
@@ -18,23 +17,22 @@ export default function AdminPanel() {
                 fetch('/api/admin/stats/daily', { headers })
             ]);
 
-            const [usersData, statsData] = await Promise.all([
+            const [usersData] = await Promise.all([
                 usersRes.json(),
                 statsRes.json()
             ]);
 
             setUsers(usersData);
-            setStats(statsData);
         } catch (err) {
             console.error('Failed to fetch admin data:', err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const toggleAdmin = async (userId) => {
         try {

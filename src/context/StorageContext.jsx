@@ -7,7 +7,7 @@ const StorageContext = createContext(null);
 const API_URL = '/api';
 
 export function StorageProvider({ children }) {
-    const { token, user } = useAuth();
+    const { token } = useAuth();
     const [activities, setActivities] = useState([]);
     const [logs, setLogs] = useState([]);
     const [redemptions, setRedemptions] = useState([]);
