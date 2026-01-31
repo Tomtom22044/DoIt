@@ -72,7 +72,5 @@ jobs:
         env:
           RUNNER_TRACKING_ID: ""
         run: |
-          npx pm2 delete taskpoint || true
-          npx pm2 start server/index.js --name taskpoint
+          npx pm2 startOrRestart ecosystem.config.cjs --update-env
           npx pm2 save
-          echo running
