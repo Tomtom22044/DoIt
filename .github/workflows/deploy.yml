@@ -5,9 +5,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  deploy:
-    runs-on: self-hosted
-
+  build:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,20 +15,35 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install Frontend Dependencies
         run: npm ci
 
       - name: Lint
-        run: NODE_OPTIONS="--max-old-space-size=512" npm run lint
+        run: npm run lint
 
       - name: Build Frontend
-        run: NODE_OPTIONS="--max-old-space-size=512" npm run build
+        run: npm run build
 
-      - name: Install Backend Dependencies
-        run: |
-          cd server
-          npm ci
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  deploy:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Free up Memory
         run: |
