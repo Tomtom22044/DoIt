@@ -33,9 +33,10 @@ app.use(express.static(path.join(__dirname, '../dist')));
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskpoint';
+console.log(`Connecting to MongoDB at: ${MONGODB_URI.replace(/:([^:@]+)@/, ':****@')}`);
 mongoose.connect(MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .then(() => console.log('Connected to MongoDB Successfully'))
+    .catch(err => console.error('CRITICAL: MongoDB connection error:', err));
 
 // --- Schemas & Models ---
 
