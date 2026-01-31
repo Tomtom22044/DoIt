@@ -1,12 +1,19 @@
 import express from 'express';
 import cors from 'cors';
-import pg from 'pg';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -23,6 +30,9 @@ app.use((req, res, next) => {
     next();
 });
 
+// Serve static files from the React app build
+app.use(express.static(path.join(__dirname, '../dist')));
+
 // Swagger configuration
 const swaggerOptions = {
     definition: {
@@ -32,27 +42,59 @@ const swaggerOptions = {
             version: '1.0.0',
             description: 'API for managing activities, logs, and redemptions in TaskPoint',
         },
-        servers: [
-            {
-                url: '/',
-                description: 'Current Host',
-            },
-        ],
+        servers: [{ url: '/', description: 'Current Host' }],
     },
-    apis: ['./index.js'], // Path to the API docs
+    apis: [__filename],
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-const { Pool } = pg;
-const pool = new Pool({
-    user: process.env.DB_USER || 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'taskpoint',
-    password: process.env.DB_PASSWORD || 'postgres',
-    port: process.env.DB_PORT || 5432,
-});
+let db;
+
+async function initDb() {
+    db = await open({
+        filename: path.join(__dirname, 'database.sqlite'),
+        driver: sqlite3.Database
+    });
+
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            name TEXT,
+            is_admin BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS activities (
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            value INTEGER NOT NULL,
+            icon TEXT NOT NULL DEFAULT 'zap',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS logs (
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+            activity_id TEXT REFERENCES activities(id) ON DELETE SET NULL,
+            activity_name TEXT NOT NULL,
+            points INTEGER NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS redemptions (
+            id TEXT PRIMARY KEY,
+            user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+            reward_name TEXT NOT NULL,
+            cost INTEGER NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+}
 
 // Auth Middleware
 const authenticateToken = (req, res, next) => {
@@ -70,8 +112,8 @@ const authenticateToken = (req, res, next) => {
 
 const isAdmin = async (req, res, next) => {
     try {
-        const result = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
-        if (result.rows.length === 0 || !result.rows[0].is_admin) {
+        const user = await db.get('SELECT is_admin FROM users WHERE id = ?', [req.user.id]);
+        if (!user || !user.is_admin) {
             return res.status(403).json({ error: 'Admin access required' });
         }
         next();
@@ -82,83 +124,30 @@ const isAdmin = async (req, res, next) => {
 
 // --- Auth Routes ---
 
-/**
- * @swagger
- * /api/auth/signup:
- *   post:
- *     summary: Register a new user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - name
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *               name:
- *                 type: string
- *     responses:
- *       200:
- *         description: User created
- */
 app.post('/api/auth/signup', async (req, res) => {
     const { email, password, name } = req.body;
     try {
         const passwordHash = await bcrypt.hash(password, 10);
-        const result = await pool.query(
-            'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name',
-            [email, passwordHash, name]
+        const id = randomUUID();
+        await db.run(
+            'INSERT INTO users (id, email, password_hash, name) VALUES (?, ?, ?, ?)',
+            [id, email, passwordHash, name]
         );
-        const user = result.rows[0];
+        const user = { id, email, name, is_admin: 0 };
         const token = jwt.sign({ id: user.id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
-        res.json({
-            user: { id: user.id, email: user.email, name: user.name, is_admin: user.is_admin },
-            token
-        });
+        res.json({ user, token });
     } catch (err) {
-        if (err.code === '23505') {
+        if (err.message.includes('UNIQUE constraint failed')) {
             return res.status(400).json({ error: 'Email already exists' });
         }
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * @swagger
- * /api/auth/login:
- *   post:
- *     summary: Login a user
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Login successful
- */
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        const user = result.rows[0];
-
+        const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
@@ -173,26 +162,6 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-/**
- * @swagger
- * /api/auth/google:
- *   post:
- *     summary: Login/Signup with Google
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - credential
- *             properties:
- *               credential:
- *                 type: string
- *     responses:
- *       200:
- *         description: Login successful
- */
 app.post('/api/auth/google', async (req, res) => {
     const { credential } = req.body;
     try {
@@ -203,17 +172,15 @@ app.post('/api/auth/google', async (req, res) => {
         const payload = ticket.getPayload();
         const { email, name, sub: googleId } = payload;
 
-        // Check if user exists
-        let result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        let user = result.rows[0];
+        let user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
 
         if (!user) {
-            // Create user if doesn't exist
-            result = await pool.query(
-                'INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3) RETURNING id, email, name',
-                [email, name, 'google-auth-' + googleId] // Placeholder hash for google users
+            const id = randomUUID();
+            await db.run(
+                'INSERT INTO users (id, email, name, password_hash) VALUES (?, ?, ?, ?)',
+                [id, email, name, 'google-auth-' + googleId]
             );
-            user = result.rows[0];
+            user = { id, email, name, is_admin: 0 };
         }
 
         const token = jwt.sign({ id: user.id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
@@ -228,148 +195,54 @@ app.post('/api/auth/google', async (req, res) => {
 
 // --- Activities ---
 
-/**
- * @swagger
- * /api/activities:
- *   get:
- *     summary: Retrieve a list of all activities
- *     responses:
- *       200:
- *         description: A list of activities
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                     format: uuid
- *                   name:
- *                     type: string
- *                   value:
- *                     type: integer
- *                   icon:
- *                     type: string
- */
 app.get('/api/activities', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT * FROM activities WHERE user_id = $1 ORDER BY created_at ASC',
+        const activities = await db.all(
+            'SELECT * FROM activities WHERE user_id = ? ORDER BY created_at ASC',
             [req.user.id]
         );
-        res.json(result.rows);
+        res.json(activities);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * @swagger
- * /api/activities:
- *   post:
- *     summary: Create a new activity
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - value
- *             properties:
- *               name:
- *                 type: string
- *               value:
- *                 type: integer
- *               icon:
- *                 type: string
- *     responses:
- *       200:
- *         description: The created activity
- */
 app.post('/api/activities', authenticateToken, async (req, res) => {
     const { name, value, icon } = req.body;
     try {
-        const result = await pool.query(
-            'INSERT INTO activities (user_id, name, value, icon) VALUES ($1, $2, $3, $4) RETURNING *',
-            [req.user.id, name, value, icon || 'zap']
+        const id = randomUUID();
+        await db.run(
+            'INSERT INTO activities (id, user_id, name, value, icon) VALUES (?, ?, ?, ?, ?)',
+            [id, req.user.id, name, value, icon || 'zap']
         );
-        res.json(result.rows[0]);
+        const activity = await db.get('SELECT * FROM activities WHERE id = ?', [id]);
+        res.json(activity);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * @swagger
- * /api/activities/{id}:
- *   put:
- *     summary: Update an activity
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               value:
- *                 type: integer
- *               icon:
- *                 type: string
- *     responses:
- *       200:
- *         description: The updated activity
- */
 app.put('/api/activities/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { name, value, icon } = req.body;
     try {
-        const result = await pool.query(
-            'UPDATE activities SET name = $1, value = $2, icon = $3 WHERE id = $4 AND user_id = $5 RETURNING *',
+        await db.run(
+            'UPDATE activities SET name = ?, value = ?, icon = ? WHERE id = ? AND user_id = ?',
             [name, value, icon, id, req.user.id]
         );
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Activity not found' });
-        }
-        res.json(result.rows[0]);
+        const activity = await db.get('SELECT * FROM activities WHERE id = ?', [id]);
+        if (!activity) return res.status(404).json({ error: 'Activity not found' });
+        res.json(activity);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * @swagger
- * /api/activities/{id}:
- *   delete:
- *     summary: Delete an activity
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Deleted successfully
- */
 app.delete('/api/activities/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
-        const result = await pool.query('DELETE FROM activities WHERE id = $1 AND user_id = $2', [id, req.user.id]);
-        if (result.rowCount === 0) {
+        const result = await db.run('DELETE FROM activities WHERE id = ? AND user_id = ?', [id, req.user.id]);
+        if (result.changes === 0) {
             return res.status(404).json({ error: 'Activity not found' });
         }
         res.json({ message: 'Deleted' });
@@ -380,62 +253,28 @@ app.delete('/api/activities/:id', authenticateToken, async (req, res) => {
 
 // --- Logs ---
 
-/**
- * @swagger
- * /api/logs:
- *   get:
- *     summary: Retrieve activity logs
- *     responses:
- *       200:
- *         description: A list of logs
- */
 app.get('/api/logs', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT * FROM logs WHERE user_id = $1 ORDER BY timestamp DESC',
+        const logs = await db.all(
+            'SELECT * FROM logs WHERE user_id = ? ORDER BY timestamp DESC',
             [req.user.id]
         );
-        res.json(result.rows);
+        res.json(logs);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * @swagger
- * /api/logs:
- *   post:
- *     summary: Log a performed activity
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - activityId
- *               - activityName
- *               - points
- *             properties:
- *               activityId:
- *                 type: string
- *                 format: uuid
- *               activityName:
- *                 type: string
- *               points:
- *                 type: integer
- *     responses:
- *       200:
- *         description: The logged entry
- */
 app.post('/api/logs', authenticateToken, async (req, res) => {
     const { activityId, activityName, points } = req.body;
     try {
-        const result = await pool.query(
-            'INSERT INTO logs (user_id, activity_id, activity_name, points) VALUES ($1, $2, $3, $4) RETURNING *',
-            [req.user.id, activityId, activityName, points]
+        const id = randomUUID();
+        await db.run(
+            'INSERT INTO logs (id, user_id, activity_id, activity_name, points) VALUES (?, ?, ?, ?, ?)',
+            [id, req.user.id, activityId, activityName, points]
         );
-        res.json(result.rows[0]);
+        const log = await db.get('SELECT * FROM logs WHERE id = ?', [id]);
+        res.json(log);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -443,75 +282,45 @@ app.post('/api/logs', authenticateToken, async (req, res) => {
 
 // --- Redemptions ---
 
-/**
- * @swagger
- * /api/redemptions:
- *   get:
- *     summary: Retrieve redemption history
- *     responses:
- *       200:
- *         description: A list of redemptions
- */
 app.get('/api/redemptions', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT * FROM redemptions WHERE user_id = $1 ORDER BY timestamp DESC',
+        const redemptions = await db.all(
+            'SELECT * FROM redemptions WHERE user_id = ? ORDER BY timestamp DESC',
             [req.user.id]
         );
-        res.json(result.rows);
+        res.json(redemptions);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-/**
- * @swagger
- * /api/redemptions:
- *   post:
- *     summary: Create a new redemption (redeem reward)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - rewardName
- *               - cost
- *             properties:
- *               rewardName:
- *                 type: string
- *               cost:
- *                 type: integer
- *     responses:
- *       200:
- *         description: The redemption entry
- */
 app.post('/api/redemptions', authenticateToken, async (req, res) => {
     const { rewardName, cost } = req.body;
     try {
-        const result = await pool.query(
-            'INSERT INTO redemptions (user_id, reward_name, cost) VALUES ($1, $2, $3) RETURNING *',
-            [req.user.id, rewardName, cost]
+        const id = randomUUID();
+        await db.run(
+            'INSERT INTO redemptions (id, user_id, reward_name, cost) VALUES (?, ?, ?, ?)',
+            [id, req.user.id, rewardName, cost]
         );
-        res.json(result.rows[0]);
+        const redemption = await db.get('SELECT * FROM redemptions WHERE id = ?', [id]);
+        res.json(redemption);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// --- Admin Routes ---
+// --- Admin ---
 
 app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const result = await pool.query(`
+        const users = await db.all(`
             SELECT u.id, u.email, u.name, u.is_admin, u.created_at,
             (SELECT COALESCE(SUM(points), 0) FROM logs WHERE user_id = u.id) as total_earned,
             (SELECT COALESCE(SUM(cost), 0) FROM redemptions WHERE user_id = u.id) as total_spent
             FROM users u
             ORDER BY u.created_at DESC
         `);
-        res.json(result.rows);
+        res.json(users);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -519,24 +328,21 @@ app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
 
 app.get('/api/admin/stats/daily', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const logsResult = await pool.query(`
-            SELECT date_trunc('day', timestamp) as day, COUNT(*) as count, SUM(points) as points
+        const logs = await db.all(`
+            SELECT date(timestamp) as day, COUNT(*) as count, SUM(points) as points
             FROM logs
             GROUP BY day
             ORDER BY day DESC
             LIMIT 30
         `);
-        const redemptionsResult = await pool.query(`
-            SELECT date_trunc('day', timestamp) as day, COUNT(*) as count, SUM(cost) as cost
+        const redemptions = await db.all(`
+            SELECT date(timestamp) as day, COUNT(*) as count, SUM(cost) as cost
             FROM redemptions
             GROUP BY day
             ORDER BY day DESC
             LIMIT 30
         `);
-        res.json({
-            logs: logsResult.rows,
-            redemptions: redemptionsResult.rows
-        });
+        res.json({ logs, redemptions });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -545,18 +351,22 @@ app.get('/api/admin/stats/daily', authenticateToken, isAdmin, async (req, res) =
 app.post('/api/admin/users/:id/toggle-admin', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await pool.query(
-            'UPDATE users SET is_admin = NOT is_admin WHERE id = $1 RETURNING id, email, name, is_admin',
-            [id]
-        );
-        res.json(result.rows[0]);
+        await db.run('UPDATE users SET is_admin = NOT is_admin WHERE id = ?', [id]);
+        const user = await db.get('SELECT id, email, name, is_admin FROM users WHERE id = ?', [id]);
+        res.json(user);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Server running at http://localhost:${port}`);
-    console.log(`Available on your network at http://192.168.1.120:${port}`);
-    console.log(`Swagger docs available at http://192.168.1.120:${port}/api-docs`);
+// For any other request, send back index.html
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+// Initialize database and start server
+initDb().then(() => {
+    app.listen(port, '0.0.0.0', () => {
+        console.log(`Server running at http://localhost:${port}`);
+    });
 });

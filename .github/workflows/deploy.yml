@@ -1,4 +1,4 @@
-name: Deploy to DigitalOcean
+name: Deploy to DigitalOcean (No Docker)
 
 on:
   push:
@@ -17,39 +17,41 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Frontend Dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
       - name: Build Frontend
-        run: npm run build
+        run: |
+          npm ci
+          npm run build
 
-      - name: Upload Build Artifact
+      - name: Prepare Backend
+        run: |
+          cd server
+          npm ci --production
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/
+          name: app-bundle
+          path: |
+            dist/
+            server/
+            package.json
 
   deploy:
     needs: build
     runs-on: self-hosted
     steps:
-      - name: Checkout code
+      - name: Checkout code (to ensure directory exists)
         uses: actions/checkout@v4
 
-      - name: Download Build Artifact
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dist
-          path: dist/
+          name: app-bundle
+          path: ./
 
-      - name: Free up Memory
+      - name: Restart Server with PM2
         run: |
-          docker compose down || true
-          docker system prune -f || true
-
-      - name: Restart Services with Docker Compose
-        run: |
-          docker compose up -d --build
+          # Use pm2 to manage the process. 
+          # You may need to run 'sudo npm install -g pm2' once on your droplet
+          pm2 restart taskpoint || pm2 start server/index.js --name taskpoint
+          pm2 save
