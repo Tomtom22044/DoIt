@@ -354,6 +354,13 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(port, '0.0.0.0', () => {
+const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${port}`);
+});
+
+server.on('error', (err) => {
+    console.error('CRITICAL: Server failed to start:', err);
+    if (err.code === 'EACCES') {
+        console.error(`Permission denied: You cannot bind to port ${port} as a non-root user.`);
+    }
 });

@@ -61,7 +61,7 @@ jobs:
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > server/.env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> server/.env
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> server/.env
-          echo "PORT=80" >> server/.env
+          echo "PORT=3000" >> server/.env
 
       - name: Install Server Dependencies on Droplet
         run: |
