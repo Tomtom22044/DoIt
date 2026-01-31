@@ -63,7 +63,13 @@ jobs:
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> server/.env
           echo "PORT=3000" >> server/.env
 
+      - name: Install Server Dependencies on Droplet
+        run: |
+          cd server
+          npm install --omit=dev
+
       - name: Restart Server with PM2
         run: |
-          npx pm2 restart taskpoint || npx pm2 start server/index.js --name taskpoint
+          npx pm2 delete taskpoint || true
+          npx pm2 start server/index.js --name taskpoint
           npx pm2 save
