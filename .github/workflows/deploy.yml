@@ -75,3 +75,4 @@ jobs:
           npx pm2 delete taskpoint || true
           npx pm2 start server/index.js --name taskpoint
           npx pm2 save
+          echo running
