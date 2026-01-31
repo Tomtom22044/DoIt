@@ -36,6 +36,7 @@ jobs:
           path: |
             dist/
             server/
+            ecosystem.config.cjs
             package.json
 
   deploy:
@@ -63,16 +64,11 @@ jobs:
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> server/.env
           echo "PORT=3000" >> server/.env
 
-      - name: Install Server Dependencies on Droplet
-        run: |
-          cd server
-          npm install --omit=dev
-
       - name: Restart Server with PM2
         env:
           RUNNER_TRACKING_ID: ""
         run: |
-          # Kill everything to clear the old 'frontend' and 'backend' processes
+          # The node_modules are already included in the artifact
           npx pm2 kill || true
           npx pm2 start ecosystem.config.cjs --update-env
           npx pm2 save
