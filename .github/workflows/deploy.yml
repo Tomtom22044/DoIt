@@ -21,13 +21,13 @@ jobs:
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: Prepare Backend
         run: |
           cd server
-          npm ci --production
+          npm install --omit=dev
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
