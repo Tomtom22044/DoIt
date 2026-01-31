@@ -42,8 +42,13 @@ jobs:
     needs: build
     runs-on: self-hosted
     steps:
-      - name: Checkout code (to ensure directory exists)
+      - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -60,5 +65,5 @@ jobs:
 
       - name: Restart Server with PM2
         run: |
-          pm2 restart taskpoint || pm2 start server/index.js --name taskpoint
-          pm2 save
+          npx pm2 restart taskpoint || npx pm2 start server/index.js --name taskpoint
+          npx pm2 save
