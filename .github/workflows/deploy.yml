@@ -18,6 +18,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
+            echo "Deploying to server..."
             cd /var/www/do-it
             git pull origin main
             npm install
