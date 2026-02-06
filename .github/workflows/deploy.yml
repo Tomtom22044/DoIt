@@ -18,7 +18,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            export PATH=$PATH:/home/$(whoami)/.nvm/versions/node/$(nvm current)/bin:/usr/local/bin
             echo "Deploying to server..."
             cd /var/www/do-it
             git pull origin main
