@@ -346,6 +346,24 @@ app.post('/api/admin/users/:id/toggle-admin', authenticateToken, isAdmin, async 
 });
 
 // Swagger Docs (basic definition)
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'TaskPoint API',
+            version: '1.0.0',
+            description: 'TaskPoint Backend API Documentation',
+        },
+        servers: [
+            {
+                url: 'http://localhost:3000',
+                description: 'Development server',
+            },
+        ],
+    },
+    apis: [path.join(__dirname, 'index.js')],
+};
+
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
