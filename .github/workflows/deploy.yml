@@ -11,15 +11,15 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Deploy to server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
           script: |
             cd /var/www/do-it
             git pull origin main
             npm install
-            npm run build
-            # Add your build/restart commands here
-            # e.g., npm install, npm run build, pm2 restart app
+            npm run start
+           
