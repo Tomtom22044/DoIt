@@ -18,9 +18,24 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
+            export PATH=$PATH:/home/$(whoami)/.nvm/versions/node/$(nvm current)/bin:/usr/local/bin
             echo "Deploying to server..."
             cd /var/www/do-it
             git pull origin main
+            
+            # Install frontend dependencies and build
             npm install
-            npm run start
+            npm run build
+            
+            # Install server dependencies
+            cd server
+            npm install
+            cd ..
+            
+            # Ensure logs directory exists
+            mkdir -p logs
+            
+            # Restart applications with PM2
+            pm2 startOrReload ecosystem.config.cjs --update-env
+            pm2 save
            
