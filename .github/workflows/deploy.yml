@@ -1,84 +1,25 @@
-name: Deploy to DigitalOcean (No Docker)
+name: Deploy to DigitalOcean
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Build Frontend
-        env:
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-        run: |
-          npm install
-          npm run build
-
-      - name: Prepare Backend
-        run: |
-          cd server
-          npm install --omit=dev
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-bundle
-          path: |
-            dist/
-            server/
-            ecosystem.config.cjs
-
-  deploy:
-    needs: build
-    runs-on: self-hosted
-    steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install PM2 and Setup Firewall
-        run: |
-          # Try to install PM2 globally if not present
-          npm install -g pm2 || sudo npm install -g pm2 || true
-          
-          # Ensure Port 3000 and 80 are open
-          sudo ufw allow 3000 || true
-          sudo ufw allow 80 || true
-          sudo ufw allow 5173 || true
-          
-          # Setup PM2 to survive reboots (only runs if not already setup)
-          if ! pm2 startup | grep -q "pm2 startup"; then
-            sudo env PATH=$PATH:$(which node) $(which pm2) startup systemd -u $USER --hp $HOME || true
-          fi
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-bundle
-          path: ./
-
-      - name: Create .env file
-        run: |
-          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > server/.env
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> server/.env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> server/.env
-          echo "PORT=3000" >> server/.env
-
-      - name: Restart Server with PM2
-        env:
-          RUNNER_TRACKING_ID: ""
-        run: |
-          pm2 kill || true
-          pm2 start ecosystem.config.cjs --update-env
-          pm2 save
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/do-it
+            git pull origin main
+            npm install
+            npm run build
+            # Add your build/restart commands here
+            # e.g., npm install, npm run build, pm2 restart app
