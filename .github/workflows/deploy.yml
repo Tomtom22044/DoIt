@@ -19,19 +19,30 @@ jobs:
           port: 22
           script: |
             echo "Deploying to server..."
-            mkdir -p /root/www
-            cd /root/www
+            TARGET_DIR="$HOME/taskpoint"
+            # Ensure target directory is either empty or a git repo
+            if [ -d "$TARGET_DIR" ] && [ ! -d "$TARGET_DIR/.git" ]; then
+              echo "Target directory exists but is not a git repository. Cleaning up..."
+              rm -rf "$TARGET_DIR"
+            fi
+            mkdir -p "$TARGET_DIR"
+            cd "$TARGET_DIR"
+            
+            # Initialize or update git repository
             if [ ! -d .git ]; then
               git clone https://github.com/${{ github.repository }}.git .
             else
-              git pull origin main
+              git fetch origin main
+              git reset --hard origin/main
             fi
             
             # Install frontend dependencies and build
+            echo "Building frontend..."
             npm install
             npm run build
             
             # Install server dependencies
+            echo "Setting up server..."
             cd server
             npm install
             cd ..
@@ -40,6 +51,7 @@ jobs:
             mkdir -p logs
             
             # Restart applications with PM2
+            echo "Starting applications..."
             pm2 startOrReload ecosystem.config.cjs --update-env
             pm2 save
            
