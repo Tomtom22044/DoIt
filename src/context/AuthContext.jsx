@@ -63,35 +63,6 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const loginWithGoogle = async (credential) => {
-        try {
-            console.log('Attempting Google login with backend...');
-            const res = await fetch(`${API_URL}/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential }),
-            });
-
-            const data = await res.json();
-            console.log('Google login response:', data);
-
-            if (!res.ok || data.error) {
-                throw new Error(data.error || `Server responded with status ${res.status}`);
-            }
-
-            setToken(data.token);
-            setUser(data.user);
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-        } catch (err) {
-            console.error('Detailed Google login error:', err);
-            if (err.message.includes('Failed to fetch')) {
-                throw new Error('לא ניתן להתחבר לשרת מחשבון גוגל. וודא שהשרת פועל ונגיש.');
-            }
-            throw err;
-        }
-    };
-
     const logout = () => {
         setToken(null);
         setUser(null);
@@ -105,7 +76,6 @@ export function AuthProvider({ children }) {
         loading,
         login,
         signup,
-        loginWithGoogle,
         logout
     };
 

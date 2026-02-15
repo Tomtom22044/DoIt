@@ -6,7 +6,6 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -17,7 +16,6 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const port = process.env.PORT || 3000;
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.use(cors());
 app.use(express.json());
@@ -152,33 +150,6 @@ app.post('/api/auth/login', async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/auth/google', async (req, res) => {
-    const { credential } = req.body;
-    try {
-        const ticket = await googleClient.verifyIdToken({
-            idToken: credential,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        });
-        const payload = ticket.getPayload();
-        const { email, name, sub: googleId } = payload;
-
-        let user = await User.findOne({ email });
-
-        if (!user) {
-            user = new User({ email, name, password_hash: 'google-auth-' + googleId });
-            await user.save();
-        }
-
-        const token = jwt.sign({ id: user._id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
-        res.json({
-            user: { id: user._id, email: user.email, name: user.name, is_admin: user.is_admin },
-            token
-        });
-    } catch (err) {
-        res.status(401).json({ error: 'Google authentication failed: ' + err.message });
     }
 });
 

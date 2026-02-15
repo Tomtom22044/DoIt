@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { LogIn, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
-import { GoogleLogin } from '@react-oauth/google';
 import styles from './AuthPage.module.css';
 
 export default function AuthPage() {
@@ -12,7 +11,7 @@ export default function AuthPage() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { login, signup, loginWithGoogle } = useAuth();
+    const { login, signup } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -115,30 +114,6 @@ export default function AuthPage() {
                         )}
                     </button>
                 </form>
-
-                <div className={styles.divider}>
-                    <div className={styles.dividerLine} />
-                    <span className={styles.dividerText}>או המשך עם</span>
-                </div>
-
-                <div className={styles.googleBtnWrapper}>
-                    <GoogleLogin
-                        onSuccess={credentialResponse => {
-                            console.log('Google Login Success (Credential received)');
-                            loginWithGoogle(credentialResponse.credential);
-                        }}
-                        onError={() => {
-                            console.error('Google Login Library Error');
-                            setError('התחברות עם גוגל נכשלה - בדקו את ה-Console');
-                        }}
-                        useOneTap={false}
-                        theme="filled_black"
-                        shape="pill"
-                        text="signin_with"
-                        locale="he"
-                        width="100%"
-                    />
-                </div>
 
                 <div className={styles.footer}>
                     <button
