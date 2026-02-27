@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import webpush from 'web-push';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import path from 'path';
@@ -19,6 +20,13 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Configure web-push
+webpush.setVapidDetails(
+    process.env.VAPID_MAILTO || 'mailto:example@yourdomain.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+);
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -43,6 +51,7 @@ const userSchema = new mongoose.Schema({
     password_hash: { type: String, required: true },
     name: { type: String },
     is_admin: { type: Boolean, default: false },
+    push_subscriptions: [mongoose.Schema.Types.Mixed],
     created_at: { type: Date, default: Date.now }
 });
 
@@ -122,9 +131,9 @@ app.post('/api/auth/signup', async (req, res) => {
         const user = new User({ email, password_hash: passwordHash, name });
         await user.save();
 
-        const token = jwt.sign({ id: user._id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
+        const token = jwt.sign({ id: user._id.toString(), email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
         res.json({
-            user: { id: user._id, email: user.email, name: user.name, is_admin: user.is_admin },
+            user: { id: user._id.toString(), email: user.email, name: user.name, is_admin: user.is_admin },
             token
         });
     } catch (err) {
@@ -143,9 +152,9 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ id: user._id, email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
+        const token = jwt.sign({ id: user._id.toString(), email: user.email, is_admin: user.is_admin }, process.env.JWT_SECRET);
         res.json({
-            user: { id: user._id, email: user.email, name: user.name, is_admin: user.is_admin },
+            user: { id: user._id.toString(), email: user.email, name: user.name, is_admin: user.is_admin },
             token
         });
     } catch (err) {
@@ -311,6 +320,67 @@ app.post('/api/admin/users/:id/toggle-admin', authenticateToken, isAdmin, async 
         user.is_admin = !user.is_admin;
         await user.save();
         res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Push Notification Routes ---
+
+app.post('/api/push/subscribe', authenticateToken, async (req, res) => {
+    const subscription = req.body;
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Add subscription if it doesn't exist
+        const subExists = user.push_subscriptions.some(
+            sub => sub.endpoint === subscription.endpoint
+        );
+
+        if (!subExists) {
+            user.push_subscriptions.push(subscription);
+            await user.save();
+        }
+
+        res.status(201).json({});
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/push/test', authenticateToken, isAdmin, async (req, res) => {
+    const { title, body } = req.body;
+    const payload = JSON.stringify({ title, body });
+
+    try {
+        const users = await User.find({ 'push_subscriptions.0': { $exists: true } });
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const user of users) {
+            const validSubscriptions = [];
+            for (const sub of user.push_subscriptions) {
+                try {
+                    await webpush.sendNotification(sub, payload);
+                    successCount++;
+                    validSubscriptions.push(sub);
+                } catch (error) {
+                    console.error(`Failed to send push to user ${user._id}:`, error);
+                    failCount++;
+                    // If error is 410 (Gone) or 404 (Not Found), remove the subscription
+                    if (error.statusCode !== 410 && error.statusCode !== 404) {
+                        validSubscriptions.push(sub);
+                    }
+                }
+            }
+            if (validSubscriptions.length !== user.push_subscriptions.length) {
+                user.push_subscriptions = validSubscriptions;
+                await user.save();
+            }
+        }
+
+        res.json({ success: true, successCount, failCount });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

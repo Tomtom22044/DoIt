@@ -1,0 +1,125 @@
+.notificationCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    margin-bottom: 2rem;
+    animation: slideIn 0.5s ease-out;
+    direction: rtl;
+}
+
+.iconContainer {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.iconRest {
+    color: #94a3b8;
+}
+
+.iconInfo {
+    color: #38bdf8;
+}
+
+.iconSuccess {
+    color: #fbbf24;
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+}
+
+.content {
+    flex: 1;
+}
+
+.headerRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.notifyButton,
+.notifyButtonActive {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    padding: 0.4rem;
+    border-radius: 0.6rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.notifyButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+    transform: scale(1.05);
+}
+
+.notifyButtonActive {
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.notifyButtonTimerActive {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: not-allowed;
+}
+
+.timerText {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.notifyButtonActive:hover {
+    background: rgba(251, 191, 36, 0.1);
+    transform: scale(1.05);
+}
+
+.message {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #cbd5e1;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -3,6 +3,8 @@ import Card from '../ui/Card';
 import styles from './Dashboard.module.css';
 import { TrendingUp, Award, Clock, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
+import DailyNotification from '../ui/DailyNotification';
+
 export default function Dashboard() {
     const { totalPoints, todayPoints, logs, redemptions } = useStorage();
 
@@ -13,6 +15,7 @@ export default function Dashboard() {
 
     return (
         <div className={styles.container}>
+            <DailyNotification />
             <div className={styles.statsGrid}>
                 <Card className={styles.balanceCard}>
                     <div className={styles.cardHeader}>
