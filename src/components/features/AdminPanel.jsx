@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import { Users, BarChart3, Shield, ShieldOff, User } from 'lucide-react';
+import PushBroadcast from './PushBroadcast';
 import styles from './AdminPanel.module.css';
 
 export default function AdminPanel() {
@@ -70,6 +71,8 @@ export default function AdminPanel() {
                     <span className={styles.statLabel}>נקודות שמומשו</span>
                 </Card>
             </div>
+
+            <PushBroadcast />
 
             <div className={styles.section}>
                 <h2><Users size={20} /> ניהול משתמשים</h2>

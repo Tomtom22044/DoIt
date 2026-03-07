@@ -333,15 +333,18 @@ app.post('/api/push/subscribe', authenticateToken, async (req, res) => {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Add subscription if it doesn't exist
-        const subExists = user.push_subscriptions.some(
+        // Update or add subscription
+        const subIndex = user.push_subscriptions.findIndex(
             sub => sub.endpoint === subscription.endpoint
         );
 
-        if (!subExists) {
+        if (subIndex > -1) {
+            user.push_subscriptions[subIndex] = subscription;
+        } else {
             user.push_subscriptions.push(subscription);
-            await user.save();
         }
+
+        await user.save();
 
         res.status(201).json({});
     } catch (err) {
